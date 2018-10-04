@@ -1,0 +1,110 @@
+---
+title: "Assignment 9"
+output: html_notebook
+---
+
+Using the dataset from last week, test a model that postulates that threat
+mediates the relationship between empathy and prejudice (see the scripts from
+the last two weeks to determine which indicators define those variables).
+
+Install packages:
+```{r}
+library(pacman)
+p_load(semPlot, tidyverse, lavaan, psych, kableExtra)
+```
+Load data:
+```{r}
+data <- read.delim("../assignment_9/data/Northdale survey _reverse coded_.dat")
+```
+Convert the variables:
+```{r}
+#   Threat
+    data$Thrt_Phy1<-data$Thrt_Phy1/3
+    data$Thrt_Phy2<-data$Thrt_Phy2/3
+    data$Thrt_Phy3<-data$Thrt_Phy3/3
+#   Prejudice
+    data$Att_IS1<-(data$Att_IS1-1)/6.75    
+    data$Att_IS2<-(data$Att_IS2-1)/6.75  
+    data$Att_IS4<-(data$Att_IS4-1)/6.75  
+#   Contact quantity
+    data$Cnt_pos_B<-data$Cnt_pos_B/2
+    data$Cnt_pos_IS1<-data$Cnt_pos_IS1/2
+#   Contact_quality
+    data$Cnt_Qul_IS1<-data$Cnt_Qul_IS1/3
+    data$Cnt_Qul_IS2<-data$Cnt_Qul_IS2/3
+    data$Cnt_Qul_IS3<-data$Cnt_Qul_IS3/3
+#   Empathy
+    data$Empath1<-data$Empath1/3    
+    data$Empath2<-data$Empath2/3
+    data$Empath3<-data$Empath3/3
+```
+```{r}
+path.dat <- data
+```
+Test the model:
+```{r}
+#   SEM of model1
+    pathm1 <- '
+            # MEASUREMENT MODEL
+              threat_scale       =~ Thrt_Phy1 + Thrt_Phy2 + Thrt_Phy3
+              prejudice_scale    =~ Att_IS1 + Att_IS2 + Att_IS4
+              empathy_scale      =~ Empath1 + Empath2 + Empath3
+      
+            # STRUCTURAL MODEL
+              threat_scale ~ empathy_scale
+              prejudice_scale ~ threat_scale + empathy_scale
+'
+```
+```{r}
+prejpathfit1 <- sem(pathm1, data = path.dat)
+    summary(prejpathfit1 , fit.measures = T, standardized = T)
+```
+The model that suggests that empathy predicts prejucdice, both directly and through the mediator variable threat, is not significantly different from the saturated model (p = 0.26, df = 24). This means that it is not significantly different from the model that utilises all possible paths, despite it being simpler - a good indicator of parsimony. The model (model 1) is significantly different from the null model (p < 0.001, df = 36), indicating that we have not dropped too many potential paths, and our predictions are still better than the no-information rate. CFI and TLI - measures of our model's location on the continuum from saturated to null model - indicate that our model is far closer to the saturated model. THese measures should approximate 1, and values > 0.95 indicate a good fit. By these measures our model has a good fit (CFI = 1.00, TLI = 1.00). AIC and BIC are noted for comparison with other models. RMSEA value should approximate 0, and values < 0.05 indicate a good fit. By this measure our model has a good fit, with the upper end of the CI only slightly above optimal (RMSEA = 0.02, CI = 0.00 - 0.06). SRMR should approximate 0, and values < 0.05 indicate a good fit. This measure also indicates that our model has good fit (SRMR = 0.03).
+
+An analysis of our latent variables indicates that all manifest variables significantly load onto the proposed latent variables.
+
+Our regression analysis indicates that empathy does not significantly predict threat (beta = 0.05, p = 0.42). However, threat and empathy are both significant direct predictors of prejudice (empathy: beta = -0.24, p < 0.001; threat: beta = 0.34, p < 0.001). Increased empathy leads to decreased prejudice, and increased threat leads to increased prejuice (this second relationship is stronger).
+
+All our etimates are positive, and the standard errors are relatively small.
+-------------------------
+Tabulate the direct, indirect and total effects of empathy on prejudice, and provide
+significance tests where appropriate. See whether you can compute the p values
+using normal theory and bootstrapping.
+```{r}
+#   SEM of model1 (direct and indirect effects)
+    pathm1_effects <- '
+            # MEASUREMENT MODEL
+              threat_scale       =~ Thrt_Phy1 + Thrt_Phy2 + Thrt_Phy3
+              prejudice_scale    =~ Att_IS1 + Att_IS2 + Att_IS4
+              empathy_scale      =~ Empath1 + Empath2 + Empath3
+  
+
+          # direct effect
+             prejudice_scale ~ c*empathy_scale
+           
+          # mediator
+             threat_scale ~ a*empathy_scale
+             prejudice_scale ~ b*threat_scale
+           
+          # indirect effect (a*b)
+             ab := a*b
+           
+          # total effect
+             total := c + (a*b)
+         '
+prejpathfit1_effects <- sem(pathm1_effects, data = path.dat)
+summary(prejpathfit1_effects , fit.measures = T, standardized = T)
+```
+```{r}
+colnames <- c("Value", "Direct effect", "Indirect effect", "Total effect")
+betavalues <- c("std.all", -0.24, 0.02, -0.23)
+pvalues <- c("p (>|z|)", 0.001, 0.425, 0.001)
+effects_tab <- rbind(colnames, betavalues, pvalues)
+
+```
+```{r}
+effects_tab %>%
+  kable() %>%
+  kable_styling()
+```
+
