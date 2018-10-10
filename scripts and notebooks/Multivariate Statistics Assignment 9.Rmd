@@ -3,7 +3,7 @@ title: "Assignment 9"
 output: html_notebook
 ---
 
-Using the dataset from last week, test a model that postulates that threat
+1. Using the dataset from last week, test a model that postulates that threat
 mediates the relationship between empathy and prejudice (see the scripts from
 the last two weeks to determine which indicators define those variables).
 
@@ -67,6 +67,18 @@ Our regression analysis indicates that empathy does not significantly predict th
 
 All our etimates are positive, and the standard errors are relatively small.
 -------------------------
+Next, we draw the model:
+```{r}
+semPaths(prejpathfit1, whatLabels = "std", residuals = TRUE, nCharNodes = 15, sizeMan = 8, shapeMan = "circle", shapeLat = "rectangle", sizeLat = 14, sizeLat2 = 5, edge.label.cex = .8, layout = "tree", rotation = 2, fixedStyle = c("red", 3), optimizeLatRes = T)
+```
+Next, we consider the residuals and modification indices:
+```{r}
+resid(prejpathfit1 , type = "normalized")
+modificationindices(prejpathfit1, sort = T)
+```
+The residuals are all fairly low, indicating a good fit. The only problematic item appears to be "Empath1" (an indicator pf empathy). It correlates much more with Thr_P1 (a measure of threat) than our model suggests. This indicates that there may be a problem with the measurement model, although it is fairly contained. The modification indices confirm that we could improve this model by altering our measurement model. The biggest effects can be obtained by allowing the errors to covary between items on the threat and empathy scales, and by redefining "Empath1" as part of the threat scale. This suggests that both scales may be measuring highly related concepts. No new paths are suggested by the modification indices, so we leave our model as is. As the hypothesis is that threat mediates the relationship between empathy and prejudice, it would not make sense to allow the errors to covary for the two scales.
+----------------------------------------------------------------------------------
+
 Tabulate the direct, indirect and total effects of empathy on prejudice, and provide
 significance tests where appropriate. See whether you can compute the p values
 using normal theory and bootstrapping.
@@ -98,13 +110,122 @@ summary(prejpathfit1_effects , fit.measures = T, standardized = T)
 ```{r}
 colnames <- c("Value", "Direct effect", "Indirect effect", "Total effect")
 betavalues <- c("std.all", -0.24, 0.02, -0.23)
-pvalues <- c("p (>|z|)", 0.001, 0.425, 0.001)
+pvalues <- c("p (>|z|)", 0.000, 0.425, 0.001)
 effects_tab <- rbind(colnames, betavalues, pvalues)
 
 ```
 ```{r}
 effects_tab %>%
-  kable() %>%
+  kable(digits = 4) %>%
   kable_styling()
 ```
+The direct effect of empathy on prejucdice is significant (beta = -0.24, p < 0.001). However the indirect effect through the mediating variable threat is small and insignificant (beta = 0.02, p = 0.425). The total effect is significant (beta = -0.23, p = 0.001), although slightly less than the direct effect alone. For this reason, threat is not a useful mediator between empathy and prejudice.
+--------------------------------------------------------------
+2. Compare an SEM model that proposes that Contact_quantity has direct and indirect effects on prejudice through threat, against a model that proposes that contact quality is a prior determinant of contact quantity and itself has direct and indirect effects on prejudice through both contact quantity and threat. Are there grounds for preferring either model over the other?
 
+Model 2: contact quantity predicts prejudice
+```{r}
+#   SEM of model2
+    pathm2 <- '
+            # MEASUREMENT MODEL
+              threat_scale       =~ Thrt_Phy1 + Thrt_Phy2 + Thrt_Phy3
+              prejudice_scale    =~ Att_IS1 + Att_IS2 + Att_IS4
+              contact_quant      =~ Cnt_pos_B + Cnt_pos_IS1
+      
+
+            # direct effect
+             prejudice_scale ~ c*contact_quant
+           
+            # mediator
+             threat_scale ~ a*contact_quant
+             prejudice_scale ~ b*threat_scale
+           
+            # indirect effect (a*b)
+             ab := a*b
+           
+            # total effect
+             total := c + (a*b)
+'
+```
+```{r}
+prejpathfit2 <- sem(pathm2, data = path.dat)
+    summary(prejpathfit2 , fit.measures = T, standardized = T)
+```
+The model that suggests that contact quantity predicts prejudice, both directly and through the mediator variable threat, is not significantly different from the saturated model (p = 0.58, df = 17). This means that it is not significantly different from the model that utilises all possible paths, despite it being simpler - a good indicator of parsimony. The model (model 2) is significantly different from the null model (p < 0.001, df = 28), indicating that we have not dropped too many potential paths, and our predictions are still better than the no-information rate. CFI and TLI - measures of our model's location on the continuum from saturated to null model - indicate that our model is far closer to the saturated model. THese measures should approximate 1, and values > 0.95 indicate a good fit. By these measures our model has a good fit (CFI = 1.00, TLI = 1.00). AIC and BIC are noted for comparison with other models. RMSEA value should approximate 0, and values < 0.05 indicate a good fit. By this measure our model has a good fit, with the upper end of the CI within the optimal range (RMSEA = 0.00, CI = 0.00 - 0.05). SRMR should approximate 0, and values < 0.05 indicate a good fit. This measure also indicates that our model has good fit (SRMR = 0.03).
+
+An analysis of our latent variables indicates that all manifest variables significantly load onto the proposed latent variables.
+
+Our regression analysis indicates that contact quantity significantly predicts threat (beta = -0.30, p < 0.001), and prejudice can be significantly predicted by both contact quantity (beta = -0.41, p = < 0.001), and (to a lesser degree) threat (beta = 0.17, p = 0.02).The mediation (indirect effect of contact quantity on prejudice through the mediator threat) is significant, but small (beta = -0.05, p = 0.02). The total effect of contact quantity on prejudice (combined direct and indirect effects) is significant (beta = -0.46, p < 0.001).  Thus an increase in contact quantity leads to a decrease in prejudice, as well as a decrease in threat, which in turn leads to a further decrease in prejudice.
+
+
+All our etimates are positive, and the standard errors are relatively small.
+
+-------------------------------------------
+Next, we look at the proposed model visually:
+```{r}
+semPaths(prejpathfit2, whatLabels = "std", residuals = TRUE, nCharNodes = 15, sizeMan = 8, shapeMan = "circle", shapeLat = "rectangle", sizeLat = 14, sizeLat2 = 5, edge.label.cex = .8, layout = "tree", rotation = 2, fixedStyle = c("red", 3), optimizeLatRes = T)
+```
+Next, we inspect the residuals and modification indices:
+```{r}
+resid(prejpathfit2 , type = "normalized")
+modificationindices(prejpathfit2, sort = T)
+```
+The residuals are all low - indicating a good fit between our observed and expected covariances. The modification indices only offer very minor modifications to the chi-square value, indicating that no further manipulation could make a large improvement on our model. Furthermore, no additional paths are suggested - the modification indices are limited to suggestions on how to redefine our measurement model.
+
+----------------------------------
+Model 3: contact quality predicts contact quantity, threat and prejudice. Contact quantity and threat, in turn, predict prejudice:
+
+```{r}
+#   SEM of model3
+    pathm3 <- '
+            # MEASUREMENT MODEL
+              threat_scale       =~ Thrt_Phy1 + Thrt_Phy2 + Thrt_Phy3
+              prejudice_scale    =~ Att_IS1 + Att_IS2 + Att_IS4
+              contact_quant      =~ Cnt_pos_B + Cnt_pos_IS1
+              contact_qual       =~ Cnt_Qul_IS1 + Cnt_Qul_IS2 + Cnt_Qul_IS3
+      
+
+            # direct effect
+             prejudice_scale ~ e*contact_qual
+           
+            # mediators
+              contact_quant ~ a*contact_qual
+             prejudice_scale ~ b*contact_quant
+             threat_scale ~ c*contact_qual
+             prejudice_scale ~ d*threat_scale
+           
+            # indirect effects (a*b & c*d)
+             ab := a*b
+             cd:= c*d
+           
+            # total effect
+             total := e + (a*b) + (c*d)
+'
+```
+```{r}
+prejpathfit3 <- sem(pathm3, data = path.dat)
+    summary(prejpathfit3 , fit.measures = T, standardized = T)
+```
+The model that suggests that contact quality predicts prejudice, both directly and through the mediator variables threat and contact quantity, is not significantly different from the saturated model (p = 0.57, df = 39). This means that it is not significantly different from the model that utilises all possible paths, despite it being simpler - a good indicator of parsimony. The model (model 3) is significantly different from the null model (p < 0.001, df = 55), indicating that we have not dropped too many potential paths, and our predictions are still better than the no-information rate. CFI and TLI - measures of our model's location on the continuum from saturated to null model - indicate that our model is far closer to the saturated model. THese measures should approximate 1, and values > 0.95 indicate a good fit. By these measures our model has a good fit (CFI = 1.00, TLI = 1.00). AIC and BIC are noted for comparison with other models. RMSEA value should approximate 0, and values < 0.05 indicate a good fit. By this measure our model has a good fit, with the upper end of the CI within the optimal range (RMSEA = 0.00, CI = 0.00 - 0.04). SRMR should approximate 0, and values < 0.05 indicate a good fit. This measure also indicates that our model has good fit (SRMR = 0.03).
+
+An analysis of our latent variables indicates that all manifest variables significantly load onto the proposed latent variables.
+
+Our regression analysis indicates that contact quality significantly predicts both contact quantity (beta = 0.54, p < 0.001), and threat (beta = -0.30, p < 0.001). Prejudice is significantly predicted from contact quality (beta = -0.22, p = 0.02) and contact quantity (beta = -0.31, p = 0.002), but not by threat (beta = 0.12, p = 0.06). Contact quantity significantly mediates the effects of contact quality on prejudice (beta = -0.17, p = 0.004). Threat does not significantly mediate the effects of contact quality on prejudice (beta = -0.04, p = 0.08). The total effects of contact quality on prejudice are significant (beta = -0.42, p < 0.001). Therefore, increased contact quality significantly predicts a decrease in prejudice, and an increase in contact quantity, which leads to a further decrease in prejudice.
+
+All our etimates are positive, and the standard errors are relatively small.
+
+----------------------------------------
+Next, we look at the proposed model visually:
+```{r}
+semPaths(prejpathfit3, whatLabels = "std", residuals = TRUE, nCharNodes = 15, sizeMan = 8, shapeMan = "circle", shapeLat = "rectangle", sizeLat = 14, sizeLat2 = 5, edge.label.cex = .8, layout = "tree", rotation = 2, fixedStyle = c("red", 3), optimizeLatRes = T)
+```
+Next we consider the residuals:
+```{r}
+resid(prejpathfit3 , type = "normalized")
+modificationindices(prejpathfit3, sort = T)
+```
+The residuals are low for the most part. Some slightly higher values suggest covariation between the threat scale and Cnt_pos_B (an indicator of contact quantity), which was not accounted for by our model. However, this did not form part of our hypothesis, and the residuals aren't worryingly high. The biggest modification indices are very small, indicating that we already have good fit, and there is very little we could modify to make the model better. The modification indices suggest that there may be a bidirectional relationship between threat and each of the mediator variables, as well as a relationship between the mediator variables themselves. It suggests either adding in  new paths, or allowing threat and contact quantity to covary. The proposed additional paths would further saturate the model without adding much to the fit, so we leave the model as is.
+-------------------------------------------------------------------------------------
+Comparison of model 2 and model 3:
+An anova comparison between the two models is not possible, as they are not hierarchical (based on different variables)
+AIC values indicate that model 2 is better (model 1: AIC = 945.72; model 2: AIC = 860.24). Model 2 contains a non-significant path (contact quality predicts threat, which predicts prejudice). Even though that path is not significant on its own, it does add to the total effects of contact quality on prejudice, thereby improving the model as a whole.
